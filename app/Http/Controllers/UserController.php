@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -13,10 +14,22 @@ class UserController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
+
+    public function __construct()
+    {
+        $this->middleware('auth');
+    }
+
     public function index()
     {
-        $users = User::all();
-        return view('users.index')->with('users', $users);
+        $isLogged = Auth::user();
+        if ($isLogged) {
+            $users = User::all();
+            return view('users.index')->with('users', $users);
+        } else {
+            return view('auth.login');
+        }
+        
     }
 
     /**
@@ -37,10 +50,10 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
-        $request->password = Hash::make($request->password);
+        $request['password']= Hash::make($request['password']);
         $req = $request->all();
         User::create($req);
-        return redirect('user')->with('flash_message', 'User added');
+        return redirect('user')->with('success', 'User added');
     }
 
     /**
@@ -79,7 +92,7 @@ class UserController extends Controller
         $user = User::find($id);
         $req = $request->all();
         $user->update($req);
-        return redirect('user')->with('flash_message', 'User updated');
+        return redirect('user')->with('success', 'User updated');
     }
 
     /**
@@ -90,7 +103,14 @@ class UserController extends Controller
      */
     public function destroy($id)
     {
-        User::destroy($id);
-        return redirect('user')->with('flash_message', 'User deleted');
+        $currentId = Auth::user()->id;
+
+        if ($id == $currentId) {
+            return redirect('user')->with('error', 'Cannot delete yourself');
+        } else {
+            User::destroy($id);
+            return redirect('user')->with('success', 'User deleted');
+        }
+        
     }
 }
